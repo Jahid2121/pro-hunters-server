@@ -31,11 +31,19 @@ async function run() {
     const jobCollection = client.db('proHunters').collection('jobs')
 
     app.get("/jobs", async(req, res) => {
-        const cursor = jobCollection.find()
+        let query = {};
+        if(req.query?.jobCategory) {
+            query = {jobCategory: req.query.jobCategory}
+        }
+        const cursor = jobCollection.find(query)
         const result = await cursor.toArray()
         res.send(result)
     })
 
+    // app.get("/jobs", async(req, res) => {
+    //     console.log(req.query);
+
+    // })
 
 
 
