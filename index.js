@@ -30,6 +30,12 @@ async function run() {
 
     const jobCollection = client.db('proHunters').collection('jobs')
 
+    app.post("/jobs", async(req, res) => {
+        const jobs = req.body;
+        const result = await jobCollection.insertOne(jobs)
+        res.send(result)
+    })
+
     app.get("/jobs", async(req, res) => {
         let query = {};
         if(req.query?.jobCategory) {
