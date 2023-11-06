@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -29,7 +29,9 @@ async function run() {
     await client.connect();
 
     const jobCollection = client.db('proHunters').collection('jobs')
-
+    const appliedJobsCollection = client.db('proHunters').collection('appliedJobs')
+    
+    // jobs
     app.post("/jobs", async(req, res) => {
         const jobs = req.body;
         const result = await jobCollection.insertOne(jobs)
@@ -43,6 +45,20 @@ async function run() {
         }
         const cursor = jobCollection.find(query)
         const result = await cursor.toArray()
+        res.send(result)
+    })
+
+    app.get("/jobs/:id", async(req, res) => {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)}
+        const result = await jobCollection.findOne(query)
+        res.send(result)
+    })
+
+    // appliedJobs 
+    app.post("/appliedJobs", async(req, res) => {
+        const appliedJobs = req.body;
+        const result = await appliedJobsCollection.insertOne(appliedJobs)
         res.send(result)
     })
 
