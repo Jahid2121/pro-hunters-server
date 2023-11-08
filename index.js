@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
@@ -30,6 +31,15 @@ async function run() {
 
     const jobCollection = client.db('proHunters').collection('jobs')
     const appliedJobsCollection = client.db('proHunters').collection('appliedJobs')
+
+    // auth related api 
+    app.post("/jwt", async(req, res) => {
+        const user = req.body;
+        console.log(user);
+        res.send(user)
+    })
+
+    
     
     // jobs
     app.post("/jobs", async(req, res) => {
@@ -42,6 +52,9 @@ async function run() {
         let query = {};
         if(req.query?.jobCategory) {
             query = {jobCategory: req.query.jobCategory}
+        }
+        else if(req.query?.loggedInUserName){
+            query = {loggedInUserName: req.query.loggedInUserName}
         }
         const cursor = jobCollection.find(query)
         const result = await cursor.toArray()
@@ -73,6 +86,33 @@ async function run() {
         res.send(result)
     })
 
+
+    app.patch("/jobs/:jobId", async(req, res) => {
+        const jobId = req.params.jobId;
+         const query = { _id: new ObjectId(jobId) };
+         const updateResult = await jobCollection.updateOne(query, { $inc: { jobApplicantsNumber: 1, "metrics.orders": 1 } });
+         res.send(updateResult)
+    })
+
+
+
+    // app.patch("/jobs/:id", async (req, res) => {
+    //     const jobId = req.params.id;
+  
+    //     try {
+    //       const query = { _id: new ObjectId(jobId) };
+    //       const updateResult = await jobCollection.updateOne(query, { $inc: { jobApplicantsNumber: -1, "metrics.orders": 1 } });
+  
+    //       if (updateResult.matchedCount === 1) {
+    //         res.status(200).send('Job applicants number decremented and orders incremented successfully');
+    //       } else {
+    //         res.status(404).send('Job not found');
+    //       }
+    //     } catch (error) {
+    //       console.error('Error updating job applicants number and orders:', error);
+    //       res.status(500).send('Internal Server Error');
+    //     }
+    //   });
 
 
 
