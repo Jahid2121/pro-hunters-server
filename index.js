@@ -124,6 +124,26 @@ async function run() {
         }
       });
 
+    //   update 
+
+    app.put("/jobs/:id", async(req, res) => {
+        const id = req.params.id;
+        const filter = {_id : new ObjectId(id)}
+        const options = { upsert: true }
+        const updatedJob = req.body;
+        const job = {
+            $set: {
+                bannerUrl: updatedJob.bannerUrl,
+                jobTitle: updatedJob.jobTitle,
+                jobCategory: updatedJob.jobCategory,
+                salaryRange: updatedJob.salaryRange
+            }
+        }
+
+        const result = await jobCollection.updateOne(filter, job, options)
+        res.send(result)
+    })
+
     // appliedJobs 
     app.post("/appliedJobs",  async(req, res) => {
         const appliedJobs = req.body;
