@@ -2,13 +2,28 @@ const express = require('express');
 require('dotenv').config()
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
 
+
+
+
 // middlewares
-app.use(cors())
+app.use(
+    cors({
+        origin: [
+            'http://localhost:5173',
+            // 'https://pro-hunters.web.app',
+            // 'https://pro-hunters.firebaseapp.com',
+        
+        ],
+        credentials: true
+    }),
+)
 app.use(express.json())
+app.use(cookieParser())
 
 
 
@@ -24,10 +39,31 @@ const client = new MongoClient(uri, {
   }
 });
 
+
+const verifyToken = async(req, res, next) => {
+    const token = req.cookies?.token;
+    console.log('value of the middleware', token);
+    if(!token){
+        return res.status(401).send({message: 'not authrized'})
+    }
+    jwt.verify(token, process.env.TOKEN, (err, decoded) => {
+        if(err){
+            console.log(err);
+            return res.status(401).send({message: 'forbidden access'})
+        }
+
+        console.log('value in the token', decoded);
+        req.user = decoded
+        next()
+    })
+}
+
+
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const jobCollection = client.db('proHunters').collection('jobs')
     const appliedJobsCollection = client.db('proHunters').collection('appliedJobs')
@@ -36,13 +72,13 @@ async function run() {
     app.post("/jwt", async(req, res) => {
         const user = req.body;
         console.log(user);
-        const token = jwt.sign(user, process.env.TOKEN, {expiresIn : '1h'})
+        const token = jwt.sign(user, process.env.TOKEN, {expiresIn : '20h'})
         res
         .cookie('token', token, {
             httpOnly: true,
-            secure: false,
-            sameSite: 'none'
+            secure: false 
         })
+
         .send({success: true})
     })
 
@@ -68,22 +104,40 @@ async function run() {
         res.send(result)
     })
 
-    app.get("/jobs/:id", async(req, res) => {
+    app.get("/jobs/:id",  async(req, res) => {
         const id = req.params.id;
         const query = {_id: new ObjectId(id)}
         const result = await jobCollection.findOne(query)
         res.send(result)
     })
 
+    // delete operation 
+    app.delete("/jobs/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        try {
+          const result = await jobCollection.deleteOne(query);
+          res.json(result);
+        } catch (error) {
+          console.error("Error deleting job:", error);
+          res.status(500).json({ error: "Internal server error" });
+        }
+      });
+
     // appliedJobs 
-    app.post("/appliedJobs", async(req, res) => {
+    app.post("/appliedJobs",  async(req, res) => {
         const appliedJobs = req.body;
+        
         const result = await appliedJobsCollection.insertOne(appliedJobs)
         res.send(result)
     })
 
-    app.get("/appliedJobs", async(req, res) => {
+    app.get("/appliedJobs", verifyToken, async(req, res) => {
         console.log(req.query)
+        console.log('token token', req.cookies.token);
+        // if(req.query.email !== req.user.email){
+        //     return res.send.status(403).send({message: 'forbidden access'})
+        // }
         let query = {}
         if(req.query?.email){
             query = {email: req.query.email}
@@ -103,23 +157,7 @@ async function run() {
 
 
 
-    // app.patch("/jobs/:id", async (req, res) => {
-    //     const jobId = req.params.id;
-  
-    //     try {
-    //       const query = { _id: new ObjectId(jobId) };
-    //       const updateResult = await jobCollection.updateOne(query, { $inc: { jobApplicantsNumber: -1, "metrics.orders": 1 } });
-  
-    //       if (updateResult.matchedCount === 1) {
-    //         res.status(200).send('Job applicants number decremented and orders incremented successfully');
-    //       } else {
-    //         res.status(404).send('Job not found');
-    //       }
-    //     } catch (error) {
-    //       console.error('Error updating job applicants number and orders:', error);
-    //       res.status(500).send('Internal Server Error');
-    //     }
-    //   });
+
 
 
 
